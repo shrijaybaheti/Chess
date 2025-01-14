@@ -25,6 +25,7 @@ red = (255, 69, 0)  # Color for checkmate
 blue = (130, 200, 130, 50)  # Translucent blue for arrows
 
 # Define fonts
+font_square_address = pygame.font.Font(pygame.font.get_default_font(), 10)  # Small font for square addresses
 font_smallest = pygame.font.Font(pygame.font.get_default_font(), 10)
 font_small = pygame.font.Font(pygame.font.get_default_font(), 16)
 font_large = pygame.font.Font(pygame.font.get_default_font(), 20)
@@ -67,6 +68,15 @@ def draw_board(window_size):
         for x in range(8):
             color = colors[(x + y) % 2]
             pygame.draw.rect(window, color, pygame.Rect(x * square_size, y * square_size, square_size, square_size))
+            
+            # Calculate the square address (e.g., "a1", "h8")
+            square_address = f"{chr(97 + x)}{8 - y}"  # 'a' is 97 in ASCII
+            
+            # Render the square address
+            address_text = font_square_address.render(square_address, True, black)  # Render the text
+            text_rect = address_text.get_rect(bottomright=(x * square_size + square_size - 2, (y + 1) * square_size - 2))  # Position it at the bottom right corner
+            window.blit(address_text, text_rect)  # Draw the text on the window
+
     if board.is_check():
         king_square = board.king(board.turn)
         color = red if board.is_checkmate() else orange
@@ -190,7 +200,7 @@ def handle_human_move(window_size):
         draw_buttons(window_size)
         draw_author_note(window) 
         pygame.display.flip()
-               
+
 def reset_game():
     global ai_white, ai_black, last_move
     board.reset()
