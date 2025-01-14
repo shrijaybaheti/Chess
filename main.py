@@ -8,7 +8,7 @@ pygame.init()
 
 # Set up display
 base_window_size = 400
-button_width, button_height = 80, 40
+button_width, button_height = 80, 30
 window = pygame.display.set_mode((base_window_size + button_width, base_window_size), pygame.RESIZABLE)
 pygame.display.set_caption('Chess Bot')
 
@@ -22,9 +22,10 @@ gray = (169, 169, 169)
 green = (34, 139, 34)
 orange = (255, 165, 0)  # Color for check
 red = (255, 69, 0)  # Color for checkmate
-blue = (130, 200, 130, 128)  # Translucent blue for arrows
+blue = (130, 200, 130, 50)  # Translucent blue for arrows
 
 # Define fonts
+font_smallest = pygame.font.Font(pygame.font.get_default_font(), 10)
 font_small = pygame.font.Font(pygame.font.get_default_font(), 16)
 font_large = pygame.font.Font(pygame.font.get_default_font(), 20)
 
@@ -32,6 +33,9 @@ font_large = pygame.font.Font(pygame.font.get_default_font(), 20)
 board = chess.Board()
 flip_board = False
 last_move = None
+
+# Add this variable at the beginning of your code
+slider_dragging = False
 
 # Load piece images
 piece_images = {}
@@ -42,6 +46,13 @@ piece_names = {
     'p': 'black_pawn.png', 'r': 'black_rook.png', 'n': 'black_knight.png',
     'b': 'black_bishop.png', 'q': 'black_queen.png', 'k': 'black_king.png'
 }
+
+author_note = "@shrijay_baheti"
+
+def draw_author_note(window):
+    text = font_smallest.render(author_note, True, white)  # Render the text
+    text_rect = text.get_rect(center=(base_window_size + button_width // 2, base_window_size - 20))  # Position it at the bottom center
+    window.blit(text, text_rect)  # Draw the text on the window
 
 def load_images(square_size):
     for piece, filename in piece_names.items():
@@ -110,13 +121,20 @@ def draw_last_move_arrow(window_size):
             # Draw the arrowhead
             pygame.draw.polygon(window, blue[:3], [end_pos, left_arrowhead, right_arrowhead])
 
-            
 def get_best_move():
     result = engine.play(board, chess.engine.Limit(depth=ai_difficulty))
     return result.move
 
+def handle_slider(x):
+    global ai_difficulty
+    slider_x = window.get_size()[0] - button_width + 10
+    slider_width = button_width - 20
+    relative_x = x - slider_x
+    if 0 <= relative_x <= slider_width:
+        ai_difficulty = int(1 + (relative_x / slider_width) * 49)
+
 def handle_human_move(window_size):
-    global last_move
+    global last_move, slider_dragging
     square_size = window_size // 8
     move_made = False
     selected_square = None
@@ -144,27 +162,35 @@ def handle_human_move(window_size):
                             move_made = True
                         selected_square = None
                 else:
-                    if window_size <= x <= window_size + button_width and 25 <= y <= 25 + button_height:
-                        reset_game()
-                        move_made = True
-                    elif window_size <= x <= window_size + button_width and 75 <= y <= 75 + button_height:
-                        toggle_ai_move()
-                        move_made = True
-                    elif window_size <= x <= window_size + button_width and 125 <= y <= 125 + button_height:
-                        undo_move()
-                        move_made = True
-                    elif window_size <= x <= window_size + button_width and 175 <= y <= 175 + button_height:
-                        flip_board_orientation()
-                        move_made = True
-                    elif window_size <= x <= window_size + button_width and 225 <= y <= 225 + button_height:
-                        handle_slider(x)
-                        move_made = True
+                    # Check for button clicks
+                    if window_size <= x <= window_size + button_width:
+                        if 25 <= y <= 25 + button_height:  # Reset button
+                            reset_game()
+                            move_made = True
+                        elif 75 <= y <= 75 + button_height:  # AI Move button
+                            toggle_ai_move()
+                            move_made = True
+                        elif 125 <= y <= 125 + button_height:  # Undo button
+                            undo_move()
+                            move_made = True
+                        elif 175 <= y <= 175 + button_height:  # Flip button
+                            flip_board_orientation()
+                            move_made = True
+                        elif 225 <= y <= 225 + button_height:  # Slider button
+                            slider_dragging = True  # Start dragging the slider
+                            handle_slider(x)  # Update difficulty immediately
+            elif event.type == pygame.MOUSEBUTTONUP:
+                slider_dragging = False  # Stop dragging the slider
+            elif event.type == pygame.MOUSEMOTION:
+                if slider_dragging:
+                    handle_slider(event.pos[0])  # Update difficulty while dragging
         draw_board(window_size)
         draw_pieces(window_size)
         draw_last_move_arrow(window_size)
         draw_buttons(window_size)
+        draw_author_note(window) 
         pygame.display.flip()
-
+               
 def reset_game():
     global ai_white, ai_black, last_move
     board.reset()
@@ -208,13 +234,12 @@ def draw_buttons(window_size):
     slider_y = 230
     slider_pos = int((ai_difficulty - 1) / 49 * slider_width) + slider_x
     pygame.draw.line(window, black, (slider_x, slider_y + button_height // 2), (slider_x + slider_width, slider_y + button_height // 2), 3)
-    pygame.draw.circle(window, blue[:3], (slider_pos, slider_y + button_height // 2), 7)
+    pygame.draw.circle(window, blue[:3], (slider_pos, slider_y + button_height // 2), 4)
 
     # Adjusted position for difficulty text
     text = font_small.render(f'Diff: {ai_difficulty}', True, black)
     text_rect = text.get_rect(center=(slider_x + slider_width // 2.5, slider_y + 5))  # Position above the slider
     window.blit(text, text_rect)
-
 
 def handle_slider(x):
     global ai_difficulty
@@ -239,6 +264,7 @@ while running:
     draw_pieces(window_size)
     draw_last_move_arrow(window_size)
     draw_buttons(window_size)
+    draw_author_note(window) 
     pygame.display.flip()
 
     if board.turn == chess.WHITE:
@@ -264,7 +290,13 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos
             if window_size <= x <= window_size + button_width and 225 <= y <= 225 + button_height:
-                handle_slider(x)
+                slider_dragging = True  # Start dragging the slider
+                handle_slider(x)  # Update difficulty immediately
+        elif event.type == pygame.MOUSEBUTTONUP:
+            slider_dragging = False  # Stop dragging the slider
+        elif event.type == pygame.MOUSEMOTION:
+            if slider_dragging:
+                handle_slider(event.pos[0])  # Update difficulty while dragging
 
 pygame.quit()
 engine.quit()
